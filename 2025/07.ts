@@ -1,9 +1,11 @@
-import { Grid } from "../lib/Coord";
+import { Coord, Grid } from "../lib/Coord";
 
 async function main() {
   const input = await Bun.file('07-input.txt').text();
   const grid = parseGrid(input);
+  const gridTwo = parseGrid(input);
   console.log(partOne(grid));
+  console.log(partTwo(gridTwo));
 }
 
 function partOne(grid: Grid<Tile>): number {
@@ -12,6 +14,11 @@ function partOne(grid: Grid<Tile>): number {
     splits += tick(grid);
   }
   return splits;
+}
+
+function partTwo(grid: Grid<Tile>): number {
+  const startX = grid[0].findIndex(tile => tile._type === "Start");
+  return possiblePathsStartingAt(grid, {x: startX, y: 1});
 }
 
 function tick(grid: Grid<Tile>): number {
@@ -29,6 +36,33 @@ function tick(grid: Grid<Tile>): number {
     }
   });
   return splits;
+}
+
+let pathsFor: number[][] = [[]];
+
+function possiblePathsStartingAt(grid: Grid<Tile>, start: Coord): number {
+  // Base case, exited grid
+  if (start.x < 0 || start.x >= grid[0].length || start.y >= grid.length) {
+    return 1;
+  }
+
+  // Previously calculated
+  if (pathsFor[start.y] && pathsFor[start.y][start.x]) return pathsFor[start.y][start.x];
+
+  const tile = grid[start.y][start.x];
+  let paths = 0;
+  if (tile._type === "Empty") {
+    paths = possiblePathsStartingAt(grid, {x: start.x, y: start.y + 1});
+  } else if (tile._type === "Splitter") {
+    paths = possiblePathsStartingAt(grid, {x: start.x - 1, y: start.y + 1}) +
+            possiblePathsStartingAt(grid, {x: start.x + 1, y: start.y + 1});
+  } else {
+    paths = 0;
+  }
+
+  if (!pathsFor[start.y]) pathsFor[start.y] = [];
+  pathsFor[start.y][start.x] = paths;
+  return paths;
 }
 
 function highestRowIndexWithoutBeamsOrStart(grid: Grid<Tile>): number {
